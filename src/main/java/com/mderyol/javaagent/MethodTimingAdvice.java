@@ -53,7 +53,7 @@ public class MethodTimingAdvice {
         return false;
     }
 
-    private static boolean hasField(Class<?> clazz, String fieldName) {
+    public static boolean hasField(Class<?> clazz, String fieldName) {
         for (Field field : clazz.getDeclaredFields()) {
             if (field.getName().equalsIgnoreCase(fieldName.substring(0, 1).toLowerCase() + fieldName.substring(1))) {
                 return true;
@@ -62,7 +62,7 @@ public class MethodTimingAdvice {
         return false;
     }
 
-    private static boolean isIgnoreMethod(Method method) {
+    public static boolean isIgnoreMethod(Method method) {
         String methodName = method.getName();
         return methodName.equals("toString")
                 || methodName.equals("hashCode")
