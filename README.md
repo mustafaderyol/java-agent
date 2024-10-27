@@ -28,6 +28,6 @@ In this project, the execution time of each method has been calculated and logge
 
 Run Script:
 ```
-java -javaagent:java -javaagent:/agent.jar=configFilePath=./config-file.json -jar your-application.jar
+java -javaagent:/agent.jar=configFilePath=./config-file.json -jar your-application.jar
 ```
 Example config-file.json -> https://github.com/mustafaderyol/java-agent/blob/main/src/main/resources/config-file.json
