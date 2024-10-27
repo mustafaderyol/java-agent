@@ -1,0 +1,19 @@
+{
+  "timeMetricOpen": true,
+  "basePackageName": "com.mderyol",
+  "log": {
+    "outputPath" : "./",
+    "maxFileSize" : 1048576,
+    "waitTime" : 300000,
+    "notifyLimit": 50000
+  },
+  "excludePackageNames": [
+    "com.mderyol.javaagent"
+  ],
+  "excludeMethodKeywords": [
+    ".enumeration."
+  ],
+  "excludeAnnotations": [
+    "com.mderyol.annotation.Log"
+  ]
+}
