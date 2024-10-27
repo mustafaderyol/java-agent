@@ -49,11 +49,12 @@ public class Agent {
                                 .and(ElementMatchers.not(ElementMatchers.isInterface()))
                                 .and(ElementMatchers.not(ElementMatchers.isAbstract()))
                                 .and(ignoreMatcherClass)
+                                .and(ignoreAnnotation)
                 )
                 .transform((builder, typeDefinitions, classLoader, module, protectionDomain) ->
                         builder.method(
                                 ElementMatchers.not(ElementMatchers.nameContains("$"))
-                                        .and(ignoreMatcherClass)
+                                        .and(ignoreMatcherMethod)
                                         .and(ignoreAnnotation)
                                 )
                                 .intercept(Advice.to(MethodTimingAdvice.class))

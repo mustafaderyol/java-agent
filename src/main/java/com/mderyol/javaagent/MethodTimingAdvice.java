@@ -30,7 +30,7 @@ public class MethodTimingAdvice {
             callerService = stackTraceElement.getClassName() + "." + stackTraceElement.getMethodName();
         }
         LogDTO logDTO = new LogDTO();
-        logDTO.setServiceName(method.getName());
+        logDTO.setServiceName(method.getDeclaringClass().getName() + "." + method.getName());
         logDTO.setDuration(duration);
         logDTO.setThreadId(threadId);
         logDTO.setTransactionId(transactionId);
