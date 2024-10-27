@@ -1,5 +1,7 @@
 package com.mderyol.javaagent;
 
+import com.mderyol.javaagent.logger.LogDTO;
+import com.mderyol.javaagent.logger.Logger;
 import net.bytebuddy.asm.Advice;
 
 import java.lang.reflect.Field;
@@ -27,7 +29,13 @@ public class MethodTimingAdvice {
             StackTraceElement stackTraceElement = stackTraceElements[2];
             callerService = stackTraceElement.getClassName() + "." + stackTraceElement.getMethodName();
         }
-
+        LogDTO logDTO = new LogDTO();
+        logDTO.setServiceName(method.getName());
+        logDTO.setDuration(duration);
+        logDTO.setThreadId(threadId);
+        logDTO.setTransactionId(transactionId);
+        logDTO.setCallerServiceName(callerService);
+        Logger.getInstance().log(logDTO);
     }
 
     public static boolean isGetter(Method method) {
