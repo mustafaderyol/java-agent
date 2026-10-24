@@ -61,7 +61,7 @@ public class AsyncTraceLogger {
     public void log(TraceEvent event) {
         if (event == null || !running.get()) return;
 
-        // Kuyruk doluysa thread'i BLOKE ETMEZ ve RAM'i ŞİŞİRMEZ!
+        // Non-blocking: drops event if queue is saturated to protect application threads and memory
         if (!eventQueue.offer(event)) {
             droppedEventsCount.incrementAndGet();
         }
@@ -119,7 +119,7 @@ public class AsyncTraceLogger {
                 }
             }
 
-            // Kalan son kayıtları flush et
+            // Flush remaining buffered records on termination
             if (writer != null) {
                 try {
                     writer.flush();
@@ -140,7 +140,7 @@ public class AsyncTraceLogger {
                 String json = objectMapper.writeValueAsString(event);
                 byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
 
-                // Dosya boyutu kontrolü (bellekteki sayaç üzerinden, disk syscall yapmadan!)
+                // In-memory byte size check to avoid disk syscall overhead
                 if (currentFileBytes + bytes.length > config.getMaxFileSizeBytes()) {
                     rotateLogFile();
                 }
@@ -163,11 +163,11 @@ public class AsyncTraceLogger {
             Path logDir = Paths.get(config.getLogDirectory());
             int maxBackups = config.getMaxBackupFiles();
 
-            // En eski dosyayı sil (disk doluluk koruması)
+            // Delete oldest backup file
             Path oldest = logDir.resolve(config.getLogFileName() + "." + maxBackups);
             Files.deleteIfExists(oldest);
 
-            // Eski dosyaları kaydır (trace.log.1, trace.log.2 ...)
+            // Shift older backup files (trace.log.1 -> trace.log.2)
             for (int i = maxBackups - 1; i >= 1; i--) {
                 Path src = logDir.resolve(config.getLogFileName() + "." + i);
                 Path dest = logDir.resolve(config.getLogFileName() + "." + (i + 1));

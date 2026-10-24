@@ -37,12 +37,12 @@ public class MethodTraceAdvice {
         boolean shouldCapture = false;
         boolean isProbeRoot = false;
 
-        // 1. Üstteki bir servis/metot probe altında mı? (Tüm alt çağrılar otomatik kapsanır)
+        // 1. Is an upstream service/method probed? (All downstream calls are automatically inherited)
         if (TraceContext.isProbeActiveForCurrentThread()) {
             shouldCapture = true;
             isProbeRoot = false;
         } else {
-            // 2. Bu metot için tanımlı doğrudan bir kural var mı?
+            // 2. Is there a direct active probe rule matching this method?
             ProbeRule rule = probeManager.getActiveRule(className, methodName);
             if (rule != null && rule.tryConsumeCapture()) {
                 shouldCapture = true;
@@ -72,10 +72,10 @@ public class MethodTraceAdvice {
             String status = (thrown == null) ? "SUCCESS" : "ERROR";
             String errorMessage = (thrown != null) ? thrown.getClass().getName() + ": " + thrown.getMessage() : null;
 
-            // 1. Normal trace.log: ASLA request/response yazmaz (Hafif ve hızlı çağrı ağacı)
+            // 1. Standard trace.log: Only records timing and call tree (Zero payload overhead)
             TraceContext.endSpan(context.span, status, errorMessage, null, null);
 
-            // 2. Eğer uzaktan probe AÇILDIYSA (veya üst servisten devralındıysa): probe-capture.log'a yazılır
+            // 2. If dynamic probe is active (or inherited from upstream): log full payload
             if (context.requestPayload != null) {
                 String responsePayload;
                 if (thrown != null) {

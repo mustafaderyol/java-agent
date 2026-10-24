@@ -15,9 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mderyol.javaagent.config.AgentConfig;
 
 /**
- * Uzaktan açılan probalar için Request ve Response payload'larını
- * normal trace.log'dan tamamen AYRI bir dosyaya (probe-capture.log) asenkron
- * ve boyut rotasyonlu (OOM / Disk Doluluk Korumalı) yazan logger.
+ * Asynchronous logger that records dynamically probed Request and Response payloads
+ * to a dedicated rotating file (probe-capture-*.log), isolated from trace.log.
  */
 public class ProbeCaptureLogger {
     private static volatile ProbeCaptureLogger INSTANCE;
@@ -91,7 +90,7 @@ public class ProbeCaptureLogger {
                             String json = mapper.writeValueAsString(ev);
                             byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
 
-                            // Boyut rotasyonu kontrolü (örn. 10MB)
+                            // Size rotation check
                             if (currentFileBytes + bytes.length > config.getMaxFileSizeBytes()) {
                                 rotateFile();
                             }
@@ -129,11 +128,11 @@ public class ProbeCaptureLogger {
             Path dir = Paths.get(config.getLogDirectory());
             int maxBackups = config.getMaxBackupFiles();
 
-            // En eski dosyayı sil (disk doluluk koruması)
+            // Delete oldest backup file
             Path oldest = dir.resolve("probe-capture.log." + maxBackups);
             Files.deleteIfExists(oldest);
 
-            // Mevcut yedekleri kaydır (.1 -> .2 vs.)
+            // Shift older backups (.1 -> .2)
             for (int i = maxBackups - 1; i >= 1; i--) {
                 Path src = dir.resolve("probe-capture.log." + i);
                 Path dest = dir.resolve("probe-capture.log." + (i + 1));

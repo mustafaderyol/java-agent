@@ -108,7 +108,7 @@ public class Agent {
                                 .and(not(isSynthetic()))
                 )
                 .transform((builder, typeDescription, classLoader, module, protectionDomain) -> {
-                    // 1. Metot Tracing Advice (Call tree, latency, dynamic probe)
+                    // 1. Method Tracing Advice (Call tree, latency, dynamic probe)
                     builder = builder.method(
                             not(isConstructor())
                                     .and(not(isStatic()))
@@ -118,7 +118,7 @@ public class Agent {
                                     .and(excludeMethodMatcher)
                     ).intercept(Advice.to(MethodTraceAdvice.class));
 
-                    // 2. HTTP/Servlet Transaction Interceptor (Controller seviyesinde TransactionId yakalama)
+                    // 2. HTTP/Servlet Transaction Interceptor (Captures distributed TransactionId at controller layer)
                     builder = builder.method(
                             isAnnotatedWith(nameContainsIgnoreCase("Mapping"))
                                     .or(named("service").or(named("doFilter")))

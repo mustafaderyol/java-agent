@@ -46,13 +46,13 @@ public class DynamicProbeManager {
     }
 
     public Map<String, ProbeRule> getActiveRules() {
-        // Süresi dolanları temizle
+        // Evict expired rules
         cleanExpiredRules();
         return Collections.unmodifiableMap(activeRules);
     }
 
     /**
-     * O(1) kontrol: Bu metot için aktif bir izleme var mı?
+     * O(1) probe evaluation check: is there an active rule matching this method?
      */
     public ProbeRule getActiveRule(String className, String methodName) {
         if (activeRules.isEmpty()) return null;
@@ -67,7 +67,7 @@ public class DynamicProbeManager {
             return rule;
         }
 
-        // 2. Metotsuz class-level probe kontrolü
+        // 2. Class-level probe check
         String wildcardKey = buildKey(className, null);
         rule = activeRules.get(wildcardKey);
         if (rule != null) {
@@ -78,7 +78,7 @@ public class DynamicProbeManager {
             return rule;
         }
 
-        // 3. Pattern / Wildcard kuralları (örn: com.mderyol.testapp.* veya TestApplication$*)
+        // 3. Pattern / Wildcard rules (e.g. com.mycompany.service.*)
         for (Map.Entry<String, ProbeRule> entry : activeRules.entrySet()) {
             ProbeRule candidate = entry.getValue();
             if (candidate.isExpired()) {
@@ -113,7 +113,7 @@ public class DynamicProbeManager {
     }
 
     /**
-     * Güvenli Request/Response serialization (OOM korumalı ve truncate destekli).
+     * Safe Request/Response payload serialization with size truncation protection.
      */
     public String serializePayload(Object data) {
         if (data == null) return null;

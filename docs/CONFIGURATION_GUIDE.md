@@ -58,7 +58,16 @@ Settings are resolved in the following priority order (highest to lowest):
   "batchSize": 500,
   "flushIntervalMs": 1000,
   "maxCallDepth": 64,
-  "maxPayloadLength": 2048
+  "maxPayloadLength": 2048,
+  "metricsEnabled": true,
+  "metricsIntervalSeconds": 60,
+  "metricsFileName": "metrics.log",
+  "metricsMaxFileSizeBytes": 10485760,
+  "metricsMaxBackupFiles": 3,
+  "logEnvironmentVariables": false,
+  "maskSensitiveEnv": true,
+  "captureSpringBeans": true,
+  "logBeansOnStartup": false
 }
 ```
 
@@ -69,10 +78,10 @@ Settings are resolved in the following priority order (highest to lowest):
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `enabled` | `boolean` | `true` | Master switch. When `false`, byte-buddy transformation is completely skipped. |
-| `jvmId` | `String` | *(Process PID)* | Custom identifier for the JVM node (e.g., `payment-node-3`). Appended to probe log file names to avoid cross-JVM conflicts. |
+| `jvmId` | `String` | *(Process PID)* | Custom identifier for the JVM node (e.g., `payment-node-3`). Appended to log file names to avoid cross-JVM conflicts. |
 | `probePort` | `int` | `9876` | Port for the embedded HTTP management server and web dashboard. |
 | `probeEnabled` | `boolean` | `true` | Enables or disables the embedded HTTP management server. |
-| `logDirectory` | `String` | `./agent-logs` | Target folder for structured trace output and probe capture files. |
+| `logDirectory` | `String` | `./agent-logs` | Target folder for structured trace output, metrics, and probe files. |
 | `logFileName` | `String` | `trace.log` | Base file name for telemetry execution traces. |
 | `maxFileSizeBytes` | `long` | `20971520` (20MB) | File size threshold at which `trace.log` is rotated. |
 | `maxBackupFiles` | `int` | `5` | Retention count for archived rotated log files (`trace.log.1`, `trace.log.2`, etc.). |
@@ -84,6 +93,15 @@ Settings are resolved in the following priority order (highest to lowest):
 | `flushIntervalMs` | `long` | `1000` | Periodic timer interval (in ms) to force flush queued telemetry to disk. |
 | `maxCallDepth` | `int` | `64` | Maximum call tree recursion depth tracked in context. |
 | `maxPayloadLength` | `int` | `2048` | String length truncation limit for captured parameter and return value payloads. |
+| `metricsEnabled` | `boolean` | `true` | Enables periodic Host Machine & JVM resource telemetry (CPU, RAM, Threads, GC, Disk). |
+| `metricsIntervalSeconds`| `int` | `60` | Metrics sampling period in seconds (minimum 5s). |
+| `metricsFileName` | `String` | `"metrics.log"` | Base filename for the rotating NDJSON metrics log. |
+| `metricsMaxFileSizeBytes`| `long` | `10485760` (10MB) | File size rotation threshold for the metrics log. |
+| `metricsMaxBackupFiles`| `int` | `3` | Retention count for archived metrics files. |
+| `logEnvironmentVariables`| `boolean`| `false` | When true, writes environment variables and system properties to `environment-<jvmId>.log` on startup. |
+| `maskSensitiveEnv` | `boolean` | `true` | Automatically masks sensitive tokens (`password`, `secret`, `token`, `key`, `auth`, `jwt`). |
+| `captureSpringBeans` | `boolean` | `true` | Detects Spring Boot `ApplicationContext` via non-invasive reflection when present. |
+| `logBeansOnStartup` | `boolean` | `false` | When true, writes registered Spring beans to `beans-<jvmId>.log` when context refreshes. |
 
 ---
 

@@ -118,36 +118,67 @@ curl -s http://localhost:9876/probe/status
 
 ---
 
-### 4. `GET /probe/events`
-Returns in-memory captured events (up to the circular buffer limit of the last 100 events).
+---
+
+### 4. `GET /metrics`
+Returns an instant JSON snapshot of JVM and Host OS resources (CPU, Memory, Threads, GC, Disk).
 
 #### Example cURL
 ```bash
-curl -s http://localhost:9876/probe/events
-```
-
-#### Response (200 OK)
-```json
-[
-  {
-    "traceId": "9f7b198c-ec6f-4318-ae71-29e2f693e5fa",
-    "spanId": "c85303df-7935-42d4-a8fe-3bc4547908b8",
-    "timestamp": 1729804215120,
-    "className": "com.mderyol.testapp.service.OrderService",
-    "methodName": "processOrder",
-    "requestPayload": "[Order{orderId='ORD-1001', amount=149.99}]",
-    "responsePayload": "OrderResponse{status='SUCCESS', orderId='ORD-1001'}",
-    "durationMs": 42
-  }
-]
+curl -s http://localhost:9876/metrics | jq .
 ```
 
 ---
 
-### 5. `GET /ui`
-Serves the embedded, interactive single-page Trace & Probe Management Dashboard.
+### 5. `GET /env`
+Inspects environment variables and JVM system properties with automatic secret masking.
+
+#### Example cURL
+```bash
+# Masked by default
+curl -s http://localhost:9876/env | jq .
+
+# Filter by prefix
+curl -s "http://localhost:9876/env?filter=JAVA_*,SPRING_*" | jq .
+
+# Unmasked (if authorized)
+curl -s "http://localhost:9876/env?unmask=true" | jq .
+```
+
+---
+
+### 6. `GET /beans`
+Returns registered Spring framework beans discovered via non-invasive reflection.
+
+#### Example cURL
+```bash
+# List all beans
+curl -s http://localhost:9876/beans | jq .
+
+# Filter by bean name
+curl -s "http://localhost:9876/beans?name=order" | jq .
+
+# Filter by package
+curl -s "http://localhost:9876/beans?package=com.mycompany.service" | jq .
+```
+
+---
+
+### 7. `GET /health`
+Returns agent operational health for Kubernetes liveness/readiness probes.
+
+#### Example cURL
+```bash
+curl -s http://localhost:9876/health | jq .
+```
+
+---
+
+### 8. `GET /ui`
+Serves the embedded, interactive single-page Trace, Probe & Resource Dashboard.
 Point your browser to:
 ```
 http://localhost:9876/ui
 ```
 *(Also accessible via `/`)*
+

@@ -61,7 +61,7 @@ public class ProbeServer {
         server.createContext("/env", new EnvHandler());
         server.createContext("/beans", new BeansHandler());
 
-        // Dahili Gömülü UI ve Log Servisi (Ayrı port gereksinimini çözer!)
+        // Embedded UI and Log Inspection Services
         server.createContext("/ui", new UiHandler());
         server.createContext("/api/files", new FilesHandler());
         server.createContext("/api/logs", new ReadLogsHandler());
@@ -81,12 +81,12 @@ public class ProbeServer {
         return boundPort;
     }
 
-    // Gömülü UI Sunumu
+    // Serves the embedded HTML single-page dashboard
     private class UiHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) {
             try {
-                // trace-viewer.html dosyasını diskten veya jar içinden oku
+                // Read trace-viewer.html from working directory or fallback to JAR classpath
                 Path localFile = Paths.get("trace-viewer.html");
                 byte[] content = null;
                 if (Files.exists(localFile)) {
@@ -113,7 +113,7 @@ public class ProbeServer {
         }
     }
 
-    // Log dizinindeki dosyaları listeleme (Rotasyonlu dosyaları seçebilmek için)
+    // List log files in the directory for viewer selection
     private class FilesHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) {

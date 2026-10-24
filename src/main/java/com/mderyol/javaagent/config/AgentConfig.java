@@ -14,10 +14,10 @@ public class AgentConfig {
 
     private boolean enabled = true;
 
-    // Eğer boş bırakılırsa veya "*" verilirse exclude edilenler hariç TÜM sınıflar izlenir
+    // Target packages to trace. If empty or "*", all non-excluded classes are traced.
     private List<String> basePackages = new ArrayList<>();
 
-    // Exclude edilecek kütüphaneler ve paketler (örn: "org.springframework.*", "com.mysql.*")
+    // Packages and third-party libraries excluded from instrumentation
     private List<String> excludePackages = new ArrayList<>(List.of(
             "com.mderyol.javaagent",
             "java.", "javax.", "jdk.", "sun.", "oracle.",
@@ -34,24 +34,24 @@ public class AgentConfig {
     private long maxFileSizeBytes = 20 * 1024 * 1024L; // 20 MB
     private int maxBackupFiles = 5;
 
-    // Asenkron kuyruk ve bellek koruması
+    // Asynchronous queue and memory protection
     private int queueCapacity = 20000;
     private int batchSize = 500;
     private long flushIntervalMs = 1000L;
     private int maxCallDepth = 64;
 
-    // Uzaktan Dynamic Probe & Viewer Portu
+    // Dynamic Remote Probe & Viewer Port
     private boolean probeEnabled = true;
 
     @JsonAlias({"port", "serverPort"})
     private int probePort = 9876;
     private int maxPayloadLength = 2048;
 
-    // JVM Instance Identifier (Config dosyasından veya JVM parametresinden verilebilir)
+    // JVM Instance Identifier (set via config or -Dagent.jvmId)
     @JsonAlias({"jvmId", "jvmInstanceId", "instanceId"})
     private String jvmInstanceId;
 
-    // Çoklu JVM'lerin aynı log dizininde çakışmasını önlemek için dosya adına jvmId ekleme
+    // Multi-JVM conflict prevention: include jvmId in log file names
     private boolean includeJvmIdInFileName = true;
 
     // Periodic System & JVM Metrics Reporting
@@ -124,7 +124,7 @@ public class AgentConfig {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        // 1. Öncelik: -javaagent:agent.jar=config=/path/to/my-config.json
+        // Priority 1: -javaagent:agent.jar=config=/path/to/my-config.json
         if (argConfigPath != null) {
             File f = new File(argConfigPath);
             if (f.exists()) {
@@ -137,7 +137,7 @@ public class AgentConfig {
             }
         }
 
-        // 2. Öncelik: -Dagent.config.path=/path/to/config.json
+        // Priority 2: -Dagent.config.path=/path/to/config.json
         String sysPath = System.getProperty("agent.config.path");
         if (sysPath != null) {
             File f = new File(sysPath);
@@ -151,7 +151,7 @@ public class AgentConfig {
             }
         }
 
-        // 3. Öncelik: Çalışma dizinindeki "agent-config.json" veya "config-file.json"
+        // Priority 3: Working directory config files ("agent-config.json" or "config-file.json")
         for (String localName : List.of("agent-config.json", "config-file.json")) {
             File localFile = new File(localName);
             if (localFile.exists()) {
@@ -164,7 +164,7 @@ public class AgentConfig {
             }
         }
 
-        // 4. Öncelik: JAR içi Classpath config-file.json
+        // Priority 4: Classpath embedded config-file.json inside JAR
         try (InputStream is = AgentConfig.class.getClassLoader().getResourceAsStream("config-file.json")) {
             if (is != null) {
                 System.out.println("[JavaAgent] Loading default config from classpath config-file.json");
