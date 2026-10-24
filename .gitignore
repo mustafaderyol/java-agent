@@ -24,3 +24,7 @@ target/
 *.jar
 *.war
 *.ear
+
+# Agent output & logs
+agent-logs/
+*.log

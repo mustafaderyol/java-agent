@@ -1,0 +1,43 @@
+{
+  "enabled": true,
+  "jvmId": "order-srv-node1",
+  "probePort": 9876,
+  "probeEnabled": true,
+  "logDirectory": "./agent-logs",
+  "logFileName": "trace.log",
+  "maxFileSizeBytes": 20971520,
+  "maxBackupFiles": 5,
+  "_comment_basePackages": "Target packages to instrument. E.g. ['com.company.*']. If left empty ([] or ['*']), all non-excluded packages are traced.",
+  "basePackages": [
+    "com.mderyol.*"
+  ],
+  "_comment_excludePackages": "Third-party libraries and framework packages to exclude from instrumentation (wildcards .* supported).",
+  "excludePackages": [
+    "com.mderyol.javaagent",
+    "java.*",
+    "javax.*",
+    "jdk.*",
+    "sun.*",
+    "oracle.*",
+    "org.springframework.*",
+    "org.apache.*",
+    "org.hibernate.*",
+    "com.fasterxml.jackson.*",
+    "net.bytebuddy.*",
+    "io.netty.*",
+    "com.mysql.*",
+    "org.postgresql.*"
+  ],
+  "excludeMethodKeywords": [
+    "toString",
+    "hashCode",
+    "equals",
+    "clone",
+    "<init>",
+    "<clinit>"
+  ],
+  "queueCapacity": 20000,
+  "batchSize": 500,
+  "flushIntervalMs": 1000,
+  "maxCallDepth": 64
+}

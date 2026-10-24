@@ -1,19 +1,41 @@
 {
-  "timeMetricOpen": true,
-  "basePackageName": "com.mderyol",
-  "log": {
-    "outputPath" : "./",
-    "maxFileSize" : 1048576,
-    "waitTime" : 300000,
-    "notifyLimit": 50000
-  },
-  "excludePackageNames": [
-    "com.mderyol.javaagent"
+  "enabled": true,
+  "probePort": 9876,
+  "probeEnabled": true,
+  "logDirectory": "./agent-logs",
+  "logFileName": "trace.log",
+  "maxFileSizeBytes": 20971520,
+  "maxBackupFiles": 5,
+  "basePackages": [
+    "com.mderyol.*"
+  ],
+  "excludePackages": [
+    "com.mderyol.javaagent",
+    "java.*",
+    "javax.*",
+    "jdk.*",
+    "sun.*",
+    "oracle.*",
+    "org.springframework.*",
+    "org.apache.*",
+    "org.hibernate.*",
+    "com.fasterxml.jackson.*",
+    "net.bytebuddy.*",
+    "io.netty.*",
+    "com.mysql.*",
+    "org.postgresql.*"
   ],
   "excludeMethodKeywords": [
-    ".enumeration."
+    "toString",
+    "hashCode",
+    "equals",
+    "clone",
+    "<init>",
+    "<clinit>"
   ],
-  "excludeAnnotations": [
-    "com.mderyol.annotation.Log"
-  ]
+  "queueCapacity": 20000,
+  "batchSize": 500,
+  "flushIntervalMs": 1000,
+  "maxCallDepth": 64,
+  "maxPayloadLength": 2048
 }
