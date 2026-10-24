@@ -182,3 +182,62 @@ http://localhost:9876/ui
 ```
 *(Also accessible via `/`)*
 
+---
+
+### 9. `GET /error-log/status`
+Returns the operational status of the dedicated method exception stack trace logger and count of captured errors.
+
+#### Example cURL
+```bash
+curl -s http://localhost:9876/error-log/status | jq .
+```
+
+#### Response (200 OK)
+```json
+{
+  "status": "UP",
+  "host": "node-1.corp",
+  "jvmId": "order-srv-node1",
+  "pid": 24605,
+  "errorLoggingEnabled": true,
+  "outputFile": "/app/agent-logs/error-order-srv-node1.log",
+  "loggedErrorCount": 4
+}
+```
+
+---
+
+### 10. `POST /error-log/toggle`
+Dynamically enables or disables method error stack trace logging at runtime without restarting the JVM.
+
+#### Example cURL: Toggle State
+```bash
+# Toggle current state (Enabled -> Disabled or Disabled -> Enabled)
+curl -s -X POST http://localhost:9876/error-log/toggle | jq .
+```
+
+#### Example cURL: Explicitly Enable or Disable
+```bash
+# Disable error stack trace logging
+curl -s -X POST http://localhost:9876/error-log/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}' | jq .
+
+# Enable error stack trace logging
+curl -s -X POST http://localhost:9876/error-log/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}' | jq .
+```
+
+#### Response (200 OK)
+```json
+{
+  "status": "SUCCESS",
+  "message": "Method error stack trace logging is now DISABLED",
+  "errorLoggingEnabled": false,
+  "outputFile": "/app/agent-logs/error-order-srv-node1.log",
+  "loggedErrorCount": 4
+}
+```
+
+

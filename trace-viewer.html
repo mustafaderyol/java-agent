@@ -1332,6 +1332,35 @@ curl -X POST http://localhost:9876/probe/stop \
   -d '{"all": true}'</pre>
         </div>
 
+        <!-- SECTION 6: ERROR STACK TRACE LOGGING -->
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+            <span style="font-size: 12px; font-weight: 700; color: #f87171;">🚨 6. Method Error Stack Trace Logging (error.log)</span>
+            <button class="btn" style="padding: 2px 8px; font-size: 10px;" onclick="copyCode('curlErrorLog')">📋 Copy</button>
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 6px 0;">
+            Remotely toggle on/off, query captured error counts, or stream dedicated exception stack traces:
+          </p>
+          <pre class="code-box" id="curlErrorLog" style="max-height: 160px;"># 1. Query error logging status and captured count:
+curl http://localhost:9876/error-log/status
+
+# 2. Remotely toggle enabled/disabled:
+curl -X POST http://localhost:9876/error-log/toggle
+
+# 3. Disable explicitly:
+curl -X POST http://localhost:9876/error-log/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+
+# 4. Enable explicitly:
+curl -X POST http://localhost:9876/error-log/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+
+# 5. Live stream error stack traces from terminal:
+tail -f agent-logs/error-*.log</pre>
+        </div>
+
       </div>
     </div>
   </div>

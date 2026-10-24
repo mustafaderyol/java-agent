@@ -168,6 +168,11 @@ public class TestApplication {
     public static class BankGatewayService {
         public String authorizeCreditCard(String customerId, double amount, String cardToken) {
             simulateLatency(50);
+            if ("CUST-104".equals(customerId) || amount > 460.0) {
+                throw new IllegalStateException("Bank authorization declined for customer " + customerId
+                        + ": Daily credit limit exceeded (Requested: $" + String.format(Locale.US, "%.2f", amount) + ")",
+                        new java.net.SocketTimeoutException("Read timed out from 3D-Secure payment processor"));
+            }
             return "AUTH-OK-" + ThreadLocalRandom.current().nextInt(100000, 999999);
         }
     }
