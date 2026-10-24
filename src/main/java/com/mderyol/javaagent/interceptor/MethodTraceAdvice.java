@@ -75,6 +75,11 @@ public class MethodTraceAdvice {
             // 1. Standard trace.log: Only records timing and call tree (Zero payload overhead)
             TraceContext.endSpan(context.span, status, errorMessage, null, null);
 
+            // 1.1 Dedicated error stack trace logging to separate file if enabled
+            if (thrown != null && com.mderyol.javaagent.error.ErrorLogManager.getInstance().isErrorLoggingEnabled()) {
+                com.mderyol.javaagent.error.ErrorLogManager.getInstance().logError(context.span, thrown);
+            }
+
             // 2. If dynamic probe is active (or inherited from upstream): log full payload
             if (context.requestPayload != null) {
                 String responsePayload;

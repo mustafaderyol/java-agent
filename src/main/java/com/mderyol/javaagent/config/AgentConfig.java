@@ -70,6 +70,12 @@ public class AgentConfig {
     private boolean captureSpringBeans = true;
     private boolean logBeansOnStartup = false;
 
+    // Method Error Stack Trace Logging
+    private boolean errorLoggingEnabled = true;
+    private String errorLogFileName = "error.log";
+    private long errorLogMaxFileSizeBytes = 10 * 1024 * 1024L; // 10 MB
+    private int errorLogMaxBackupFiles = 5;
+
     public AgentConfig() {}
 
     public static AgentConfig getInstance() {
@@ -201,6 +207,7 @@ public class AgentConfig {
                     case "maskEnv", "maskSensitiveEnv" -> this.maskSensitiveEnv = Boolean.parseBoolean(val);
                     case "captureBeans", "captureSpringBeans" -> this.captureSpringBeans = Boolean.parseBoolean(val);
                     case "logBeans", "logBeansOnStartup" -> this.logBeansOnStartup = Boolean.parseBoolean(val);
+                    case "errorLog", "errorLogEnabled", "errorLoggingEnabled" -> this.errorLoggingEnabled = Boolean.parseBoolean(val);
                 }
             }
         }
@@ -314,4 +321,31 @@ public class AgentConfig {
     public void setCaptureSpringBeans(boolean captureSpringBeans) { this.captureSpringBeans = captureSpringBeans; }
     public boolean isLogBeansOnStartup() { return logBeansOnStartup; }
     public void setLogBeansOnStartup(boolean logBeansOnStartup) { this.logBeansOnStartup = logBeansOnStartup; }
+
+    public boolean isErrorLoggingEnabled() { return errorLoggingEnabled; }
+    public void setErrorLoggingEnabled(boolean errorLoggingEnabled) { this.errorLoggingEnabled = errorLoggingEnabled; }
+    public String getErrorLogFileName() { return errorLogFileName; }
+    public void setErrorLogFileName(String errorLogFileName) { this.errorLogFileName = errorLogFileName; }
+    public long getErrorLogMaxFileSizeBytes() { return errorLogMaxFileSizeBytes; }
+    public void setErrorLogMaxFileSizeBytes(long errorLogMaxFileSizeBytes) { this.errorLogMaxFileSizeBytes = errorLogMaxFileSizeBytes; }
+    public int getErrorLogMaxBackupFiles() { return errorLogMaxBackupFiles; }
+    public void setErrorLogMaxBackupFiles(int errorLogMaxBackupFiles) { this.errorLogMaxBackupFiles = errorLogMaxBackupFiles; }
+
+    public String getEffectiveErrorFileName() {
+        if (!includeJvmIdInFileName) {
+            return (errorLogFileName != null && !errorLogFileName.isBlank()) ? errorLogFileName : "error.log";
+        }
+        String base = (errorLogFileName != null && !errorLogFileName.isBlank()) ? errorLogFileName : "error.log";
+        if (base.contains("{jvmId}")) {
+            return base.replace("{jvmId}", getEffectiveJvmId());
+        }
+        if (base.equals("error.log")) {
+            return "error-" + getEffectiveJvmId() + ".log";
+        }
+        int dot = base.lastIndexOf('.');
+        if (dot != -1) {
+            return base.substring(0, dot) + "-" + getEffectiveJvmId() + base.substring(dot);
+        }
+        return base + "-" + getEffectiveJvmId();
+    }
 }

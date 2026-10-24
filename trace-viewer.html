@@ -955,6 +955,13 @@
                 <div class="tool-desc">Inspect masked env vars & JVM properties</div>
               </div>
             </a>
+            <a href="javascript:void(0)" onclick="closeDropdowns(); toggleErrorLogging();" id="toolErrorLogToggle">
+              <span class="tool-icon">🚨</span>
+              <div class="tool-text">
+                <div class="tool-title" id="toolErrorLogTitle">Error Stack Traces: Enabled 🟢</div>
+                <div class="tool-desc" id="toolErrorLogDesc">Click to toggle dedicated error.log stack trace capture</div>
+              </div>
+            </a>
             <div class="dropdown-divider"></div>
             <a href="javascript:void(0)" onclick="closeDropdowns(); openCurlGuideModal();">
               <span class="tool-icon">📖</span>
@@ -2374,13 +2381,50 @@ curl -X POST http://localhost:9876/probe/stop \
       return Math.floor(diffSec / 3600) + 'h ago';
     }
 
+    async function checkErrorLogStatus() {
+      try {
+        const resp = await fetch(getApiBaseUrl() + '/error-log/status');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const title = document.getElementById('toolErrorLogTitle');
+        const desc = document.getElementById('toolErrorLogDesc');
+        if (title && data.errorLoggingEnabled !== undefined) {
+          if (data.errorLoggingEnabled) {
+            title.textContent = `Error Stack Traces: Enabled 🟢`;
+            desc.textContent = `Active (${data.loggedErrorCount || 0} captured) — click to disable`;
+          } else {
+            title.textContent = `Error Stack Traces: Disabled 🔴`;
+            desc.textContent = `Turned off — click to enable`;
+          }
+        }
+      } catch (ignored) {}
+    }
+
+    async function toggleErrorLogging() {
+      try {
+        const resp = await fetch(getApiBaseUrl() + '/error-log/toggle', { method: 'POST' });
+        if (!resp.ok) {
+          showToast("Failed to toggle error logging", "❌");
+          return;
+        }
+        const data = await resp.json();
+        showToast(data.message, data.errorLoggingEnabled ? "🟢" : "⏸️");
+        await checkErrorLogStatus();
+        await loadLogFilesList();
+      } catch (e) {
+        showToast("Error connecting to server", "❌");
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       await loadLogFilesList();
       await fetchSelectedLogFile();
       await refreshProbeStatus();
       await fetchLiveMetrics();
+      await checkErrorLogStatus();
       setInterval(refreshProbeStatus, 4000);
       setInterval(fetchLiveMetrics, 6000);
+      setInterval(checkErrorLogStatus, 6000);
     });
   </script>
 </body>

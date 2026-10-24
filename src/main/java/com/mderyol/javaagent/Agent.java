@@ -57,7 +57,13 @@ public class Agent {
             // 5. Optional Environment Variables & System Properties file logging
             com.mderyol.javaagent.env.EnvironmentManager.logToFileIfEnabled(config);
 
-            // 6. Start Dynamic Remote Probe & Web UI HTTP Server
+            // 6. Initialize Method Error Stack Trace Logger
+            com.mderyol.javaagent.error.AsyncErrorLogger.init(config);
+            com.mderyol.javaagent.error.ErrorLogManager.init(config);
+            System.out.println("[JavaAgent] AsyncErrorLogger initialized (file: " + config.getEffectiveErrorFileName()
+                    + ", default: " + (config.isErrorLoggingEnabled() ? "ENABLED" : "DISABLED") + ")");
+
+            // 7. Start Dynamic Remote Probe & Web UI HTTP Server
             ProbeServer.start(config);
 
             // 6. Install Bytecode Instrumentation

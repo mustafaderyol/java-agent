@@ -52,5 +52,10 @@
   "maskSensitiveEnv": true,
   "_comment_beans": "Optional Spring Framework Bean discovery and startup logging.",
   "captureSpringBeans": true,
-  "logBeansOnStartup": false
+  "logBeansOnStartup": false,
+  "_comment_errorLog": "Dedicated method exception stack trace logging to separate rotating file (default enabled, remotely toggleable).",
+  "errorLoggingEnabled": true,
+  "errorLogFileName": "error.log",
+  "errorLogMaxFileSizeBytes": 10485760,
+  "errorLogMaxBackupFiles": 5
 }

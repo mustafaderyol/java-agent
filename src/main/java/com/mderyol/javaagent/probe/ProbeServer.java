@@ -60,6 +60,8 @@ public class ProbeServer {
         server.createContext("/metrics", new MetricsHandler());
         server.createContext("/env", new EnvHandler());
         server.createContext("/beans", new BeansHandler());
+        server.createContext("/error-log/status", new ErrorLogStatusHandler());
+        server.createContext("/error-log/toggle", new ErrorLogToggleHandler());
 
         // Embedded UI and Log Inspection Services
         server.createContext("/ui", new UiHandler());
@@ -132,7 +134,10 @@ public class ProbeServer {
                                 fileInfo.put("sizeFormatted", formatBytes(Files.size(p)));
                                 fileInfo.put("lastModified", Files.getLastModifiedTime(p).toInstant().toString());
                                 fileInfo.put("isProbe", name.contains("probe"));
-                                fileInfo.put("isActive", name.equals(config.getEffectiveTraceFileName()) || name.equals(config.getEffectiveProbeFileName()));
+                                fileInfo.put("isError", name.contains("error"));
+                                fileInfo.put("isActive", name.equals(config.getEffectiveTraceFileName())
+                                        || name.equals(config.getEffectiveProbeFileName())
+                                        || name.equals(config.getEffectiveErrorFileName()));
                                 files.add(fileInfo);
                             }
                         }
@@ -389,6 +394,8 @@ public class ProbeServer {
             metrics.put("droppedEvents", logger.getDroppedEventsCount());
             metrics.put("queuePendingSize", logger.getQueueSize());
             metrics.put("activeProbes", DynamicProbeManager.getInstance().getActiveRules().size());
+            metrics.put("errorLoggingEnabled", com.mderyol.javaagent.error.ErrorLogManager.getInstance().isErrorLoggingEnabled());
+            metrics.put("loggedErrors", com.mderyol.javaagent.error.ErrorLogManager.getInstance().getLoggedErrorCount());
 
             sendResponse(exchange, 200, metrics);
         }
@@ -448,6 +455,68 @@ public class ProbeServer {
             } catch (Exception e) {
                 sendResponse(exchange, 500, Map.of("error", "Failed to retrieve Spring beans: " + e.getMessage()));
             }
+        }
+    }
+
+    private class ErrorLogStatusHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            addCorsHeaders(exchange);
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            com.mderyol.javaagent.error.ErrorLogManager mgr = com.mderyol.javaagent.error.ErrorLogManager.getInstance();
+            Map<String, Object> resp = new LinkedHashMap<>();
+            resp.put("status", "UP");
+            resp.put("host", HostInfo.getHostName());
+            resp.put("jvmId", HostInfo.getJvmId());
+            resp.put("pid", HostInfo.getPid());
+            resp.put("errorLoggingEnabled", mgr.isErrorLoggingEnabled());
+            resp.put("outputFile", com.mderyol.javaagent.error.AsyncErrorLogger.getInstance().getAbsolutePath());
+            resp.put("loggedErrorCount", mgr.getLoggedErrorCount());
+            sendResponse(exchange, 200, resp);
+        }
+    }
+
+    private class ErrorLogToggleHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            addCorsHeaders(exchange);
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            com.mderyol.javaagent.error.ErrorLogManager mgr = com.mderyol.javaagent.error.ErrorLogManager.getInstance();
+
+            boolean targetState = !mgr.isErrorLoggingEnabled();
+
+            if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                try {
+                    String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8).trim();
+                    if (!body.isEmpty()) {
+                        Map<String, Object> map = mapper.readValue(body, Map.class);
+                        if (map.containsKey("enabled")) {
+                            targetState = Boolean.parseBoolean(String.valueOf(map.get("enabled")));
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            Map<String, String> query = parseQueryParams(exchange.getRequestURI().getQuery());
+            if (query.containsKey("enabled")) {
+                targetState = Boolean.parseBoolean(query.get("enabled"));
+            }
+
+            mgr.setErrorLoggingEnabled(targetState);
+
+            Map<String, Object> resp = new LinkedHashMap<>();
+            resp.put("status", "SUCCESS");
+            resp.put("message", "Method error stack trace logging is now " + (targetState ? "ENABLED" : "DISABLED"));
+            resp.put("errorLoggingEnabled", targetState);
+            resp.put("outputFile", com.mderyol.javaagent.error.AsyncErrorLogger.getInstance().getAbsolutePath());
+            resp.put("loggedErrorCount", mgr.getLoggedErrorCount());
+            sendResponse(exchange, 200, resp);
         }
     }
 
