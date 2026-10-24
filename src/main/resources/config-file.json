@@ -37,5 +37,10 @@
   "batchSize": 500,
   "flushIntervalMs": 1000,
   "maxCallDepth": 64,
-  "maxPayloadLength": 2048
+  "maxPayloadLength": 2048,
+  "metricsEnabled": true,
+  "metricsIntervalSeconds": 60,
+  "metricsFileName": "metrics.log",
+  "metricsMaxFileSizeBytes": 10485760,
+  "metricsMaxBackupFiles": 3
 }

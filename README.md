@@ -92,7 +92,8 @@ Detailed design and internals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   - Bounded ring buffer with drop policy protects against unbounded RAM consumption during traffic bursts.
   - Recursion depth caps (`maxCallDepth: 64`) and string length truncation prevent stack overflows and memory exhaustion.
 - **Multi-JVM & Cloud Isolation**: Automatic or configurable `jvmId`, Process PID, and Hostname tagging ensure isolated log streams even when multiple JVMs execute on the same host or Kubernetes node.
-- **Embedded Web Dashboard**: Self-contained single-page dashboard served directly by the agent on `http://localhost:9876/ui` with search, trace trees, probe controls, and payload inspectors.
+- **Periodic System & JVM Resource Metrics**: Autonomous, ultra-low-overhead background logger sampling Host CPU, JVM CPU, Heap Memory, Host RAM, Active Threads, Garbage Collection metrics, and Disk Space into rotating NDJSON files (`agent-logs/metrics-*.log`) and exposing live data via `GET /metrics`.
+- **Embedded Web Dashboard**: Self-contained single-page dashboard served directly by the agent on `http://localhost:9876/ui` with live system health indicators, search, trace trees, probe controls, and payload inspectors.
 
 ---
 
@@ -233,6 +234,7 @@ Full configuration details: [docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUI
 ## 📚 Documentation Index
 
 - [Architecture & Internals](docs/ARCHITECTURE.md)
+- [System & JVM Metrics Guide](docs/METRICS_GUIDE.md)
 - [Dynamic Probe API Reference](docs/DYNAMIC_PROBE_API.md)
 - [Agent Configuration Guide](docs/CONFIGURATION_GUIDE.md)
 

@@ -47,10 +47,17 @@ public class Agent {
             AsyncTraceLogger.init(config);
             System.out.println("[JavaAgent] AsyncTraceLogger initialized (dir: " + config.getLogDirectory() + ")");
 
-            // 4. Start Dynamic Remote Probe & Web UI HTTP Server
+            // 4. Initialize Periodic System & JVM Metrics Logger
+            if (config.isMetricsEnabled()) {
+                com.mderyol.javaagent.metrics.AsyncMetricsLogger.init(config);
+                System.out.println("[JavaAgent] AsyncMetricsLogger initialized (file: " + config.getEffectiveMetricsFileName()
+                        + ", interval: " + config.getMetricsIntervalSeconds() + "s)");
+            }
+
+            // 5. Start Dynamic Remote Probe & Web UI HTTP Server
             ProbeServer.start(config);
 
-            // 5. Install Bytecode Instrumentation
+            // 6. Install Bytecode Instrumentation
             installAgent(instrumentation, config);
 
             System.out.println("[JavaAgent] Bytecode instrumentation successfully registered for base packages: "

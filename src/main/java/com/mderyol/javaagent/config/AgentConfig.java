@@ -54,6 +54,13 @@ public class AgentConfig {
     // Çoklu JVM'lerin aynı log dizininde çakışmasını önlemek için dosya adına jvmId ekleme
     private boolean includeJvmIdInFileName = true;
 
+    // Periodic System & JVM Metrics Reporting
+    private boolean metricsEnabled = true;
+    private int metricsIntervalSeconds = 60;
+    private String metricsFileName = "metrics.log";
+    private long metricsMaxFileSizeBytes = 10 * 1024 * 1024L; // 10 MB
+    private int metricsMaxBackupFiles = 3;
+
     public AgentConfig() {}
 
     public static AgentConfig getInstance() {
@@ -181,6 +188,8 @@ public class AgentConfig {
                     case "logDir" -> this.logDirectory = val;
                     case "queueCapacity" -> this.queueCapacity = Integer.parseInt(val);
                     case "maxCallDepth" -> this.maxCallDepth = Integer.parseInt(val);
+                    case "metricsEnabled" -> this.metricsEnabled = Boolean.parseBoolean(val);
+                    case "metricsInterval", "metricsIntervalSeconds" -> this.metricsIntervalSeconds = Integer.parseInt(val);
                 }
             }
         }
@@ -252,5 +261,34 @@ public class AgentConfig {
             return "probe-capture.log";
         }
         return "probe-capture-" + getEffectiveJvmId() + ".log";
+    }
+
+    public boolean isMetricsEnabled() { return metricsEnabled; }
+    public void setMetricsEnabled(boolean metricsEnabled) { this.metricsEnabled = metricsEnabled; }
+    public int getMetricsIntervalSeconds() { return metricsIntervalSeconds; }
+    public void setMetricsIntervalSeconds(int metricsIntervalSeconds) { this.metricsIntervalSeconds = metricsIntervalSeconds; }
+    public String getMetricsFileName() { return metricsFileName; }
+    public void setMetricsFileName(String metricsFileName) { this.metricsFileName = metricsFileName; }
+    public long getMetricsMaxFileSizeBytes() { return metricsMaxFileSizeBytes; }
+    public void setMetricsMaxFileSizeBytes(long metricsMaxFileSizeBytes) { this.metricsMaxFileSizeBytes = metricsMaxFileSizeBytes; }
+    public int getMetricsMaxBackupFiles() { return metricsMaxBackupFiles; }
+    public void setMetricsMaxBackupFiles(int metricsMaxBackupFiles) { this.metricsMaxBackupFiles = metricsMaxBackupFiles; }
+
+    public String getEffectiveMetricsFileName() {
+        if (!includeJvmIdInFileName) {
+            return (metricsFileName != null && !metricsFileName.isBlank()) ? metricsFileName : "metrics.log";
+        }
+        String base = (metricsFileName != null && !metricsFileName.isBlank()) ? metricsFileName : "metrics.log";
+        if (base.contains("{jvmId}")) {
+            return base.replace("{jvmId}", getEffectiveJvmId());
+        }
+        if (base.equals("metrics.log")) {
+            return "metrics-" + getEffectiveJvmId() + ".log";
+        }
+        int dot = base.lastIndexOf('.');
+        if (dot != -1) {
+            return base.substring(0, dot) + "-" + getEffectiveJvmId() + base.substring(dot);
+        }
+        return base + "-" + getEffectiveJvmId();
     }
 }

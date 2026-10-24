@@ -57,7 +57,7 @@ public class ProbeServer {
         server.createContext("/probe/stop", new StopProbeHandler());
         server.createContext("/probe/status", new StatusProbeHandler());
         server.createContext("/health", new HealthHandler());
-        server.createContext("/metrics", new HealthHandler());
+        server.createContext("/metrics", new MetricsHandler());
 
         // Dahili Gömülü UI ve Log Servisi (Ayrı port gereksinimini çözer!)
         server.createContext("/ui", new UiHandler());
@@ -402,6 +402,25 @@ public class ProbeServer {
             metrics.put("activeProbes", DynamicProbeManager.getInstance().getActiveRules().size());
 
             sendResponse(exchange, 200, metrics);
+        }
+    }
+
+    private class MetricsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) {
+            addCorsHeaders(exchange);
+            try {
+                com.mderyol.javaagent.metrics.AsyncMetricsLogger metricsLogger = com.mderyol.javaagent.metrics.AsyncMetricsLogger.getInstance();
+                if (metricsLogger != null) {
+                    com.mderyol.javaagent.metrics.SystemMetricsSnapshot snapshot = metricsLogger.getLatestSnapshot();
+                    sendResponse(exchange, 200, snapshot.toMap());
+                } else {
+                    com.mderyol.javaagent.metrics.SystemMetricsSnapshot snapshot = com.mderyol.javaagent.metrics.MetricsCollector.collect(config);
+                    sendResponse(exchange, 200, snapshot.toMap());
+                }
+            } catch (Exception e) {
+                sendResponse(exchange, 500, Map.of("error", "Failed to retrieve metrics: " + e.getMessage()));
+            }
         }
     }
 
