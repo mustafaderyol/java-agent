@@ -10,7 +10,7 @@ Settings are resolved in the following priority order (highest to lowest):
 1. **JVM System Properties** (e.g. `-Dagent.probePort=9999`)
 2. **Java Agent String Arguments** (e.g. `-javaagent:javaagent-2.0.0.jar=config=/etc/agent.json,probePort=9999`)
 3. **External Configuration File** (`agent-config.json` in the current working directory or path specified by `config=...`)
-4. **Classpath Fallback** (`config-file.json` embedded in the JAR)
+4. **Classpath Fallback** (`agent-config.json` embedded in the JAR)
 5. **Built-in Hardcoded Defaults**
 
 ---

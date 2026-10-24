@@ -151,23 +151,21 @@ public class AgentConfig {
             }
         }
 
-        // Priority 3: Working directory config files ("agent-config.json" or "config-file.json")
-        for (String localName : List.of("agent-config.json", "config-file.json")) {
-            File localFile = new File(localName);
-            if (localFile.exists()) {
-                try (InputStream is = new FileInputStream(localFile)) {
-                    System.out.println("[JavaAgent] Loading config from working directory: " + localFile.getAbsolutePath());
-                    return mapper.readValue(is, AgentConfig.class);
-                } catch (Exception e) {
-                    System.err.println("[JavaAgent] Failed to read local config " + localName + ": " + e.getMessage());
-                }
+        // Priority 3: Working directory config file ("agent-config.json")
+        File localFile = new File("agent-config.json");
+        if (localFile.exists()) {
+            try (InputStream is = new FileInputStream(localFile)) {
+                System.out.println("[JavaAgent] Loading config from working directory: " + localFile.getAbsolutePath());
+                return mapper.readValue(is, AgentConfig.class);
+            } catch (Exception e) {
+                System.err.println("[JavaAgent] Failed to read local config agent-config.json: " + e.getMessage());
             }
         }
 
-        // Priority 4: Classpath embedded config-file.json inside JAR
-        try (InputStream is = AgentConfig.class.getClassLoader().getResourceAsStream("config-file.json")) {
+        // Priority 4: Classpath embedded agent-config.json inside JAR
+        try (InputStream is = AgentConfig.class.getClassLoader().getResourceAsStream("agent-config.json")) {
             if (is != null) {
-                System.out.println("[JavaAgent] Loading default config from classpath config-file.json");
+                System.out.println("[JavaAgent] Loading default config from classpath agent-config.json");
                 return mapper.readValue(is, AgentConfig.class);
             }
         } catch (Exception ignored) {}

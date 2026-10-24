@@ -40,6 +40,7 @@
   "batchSize": 500,
   "flushIntervalMs": 1000,
   "maxCallDepth": 64,
+  "maxPayloadLength": 2048,
   "_comment_metrics": "Periodic Host Machine & JVM resource metrics reporting (CPU, Memory, Threads, GC, Disk). Logs to rotating NDJSON file.",
   "metricsEnabled": true,
   "metricsIntervalSeconds": 60,
