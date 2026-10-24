@@ -93,7 +93,9 @@ Detailed design and internals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   - Recursion depth caps (`maxCallDepth: 64`) and string length truncation prevent stack overflows and memory exhaustion.
 - **Multi-JVM & Cloud Isolation**: Automatic or configurable `jvmId`, Process PID, and Hostname tagging ensure isolated log streams even when multiple JVMs execute on the same host or Kubernetes node.
 - **Periodic System & JVM Resource Metrics**: Autonomous, ultra-low-overhead background logger sampling Host CPU, JVM CPU, Heap Memory, Host RAM, Active Threads, Garbage Collection metrics, and Disk Space into rotating NDJSON files (`agent-logs/metrics-*.log`) and exposing live data via `GET /metrics`.
-- **Embedded Web Dashboard**: Self-contained single-page dashboard served directly by the agent on `http://localhost:9876/ui` with live system health indicators, search, trace trees, probe controls, and payload inspectors.
+- **Environment Variables & System Properties Inspection**: On-demand logging and HTTP endpoint (`GET /env`) with automatic sensitive data masking (`password`, `secret`, `token`, `key`).
+- **Spring Framework Bean Discovery**: Automatic detection of Spring Boot `ApplicationContext` via non-invasive reflection, with REST API (`GET /beans`), startup file logging, and 1-click dynamic method probing directly from the Web UI.
+- **Embedded Web Dashboard**: Self-contained single-page dashboard served directly by the agent on `http://localhost:9876/ui` with live system health indicators, interactive Spring Beans explorer, environment inspector, search, trace trees, and probe controls.
 
 ---
 
@@ -235,6 +237,7 @@ Full configuration details: [docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUI
 
 - [Architecture & Internals](docs/ARCHITECTURE.md)
 - [System & JVM Metrics Guide](docs/METRICS_GUIDE.md)
+- [Spring Beans & Environment Guide](docs/SPRING_BEANS_AND_ENV_GUIDE.md)
 - [Dynamic Probe API Reference](docs/DYNAMIC_PROBE_API.md)
 - [Agent Configuration Guide](docs/CONFIGURATION_GUIDE.md)
 

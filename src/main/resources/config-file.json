@@ -42,5 +42,9 @@
   "metricsIntervalSeconds": 60,
   "metricsFileName": "metrics.log",
   "metricsMaxFileSizeBytes": 10485760,
-  "metricsMaxBackupFiles": 3
+  "metricsMaxBackupFiles": 3,
+  "logEnvironmentVariables": false,
+  "maskSensitiveEnv": true,
+  "captureSpringBeans": true,
+  "logBeansOnStartup": false
 }

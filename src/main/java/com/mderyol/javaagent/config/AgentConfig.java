@@ -61,6 +61,15 @@ public class AgentConfig {
     private long metricsMaxFileSizeBytes = 10 * 1024 * 1024L; // 10 MB
     private int metricsMaxBackupFiles = 3;
 
+    // Environment Variables & System Properties Inspection
+    private boolean logEnvironmentVariables = false;
+    private boolean maskSensitiveEnv = true;
+    private List<String> envFilter = new ArrayList<>(List.of("*"));
+
+    // Spring Bean Inspection
+    private boolean captureSpringBeans = true;
+    private boolean logBeansOnStartup = false;
+
     public AgentConfig() {}
 
     public static AgentConfig getInstance() {
@@ -190,6 +199,10 @@ public class AgentConfig {
                     case "maxCallDepth" -> this.maxCallDepth = Integer.parseInt(val);
                     case "metricsEnabled" -> this.metricsEnabled = Boolean.parseBoolean(val);
                     case "metricsInterval", "metricsIntervalSeconds" -> this.metricsIntervalSeconds = Integer.parseInt(val);
+                    case "logEnv", "logEnvironmentVariables" -> this.logEnvironmentVariables = Boolean.parseBoolean(val);
+                    case "maskEnv", "maskSensitiveEnv" -> this.maskSensitiveEnv = Boolean.parseBoolean(val);
+                    case "captureBeans", "captureSpringBeans" -> this.captureSpringBeans = Boolean.parseBoolean(val);
+                    case "logBeans", "logBeansOnStartup" -> this.logBeansOnStartup = Boolean.parseBoolean(val);
                 }
             }
         }
@@ -291,4 +304,16 @@ public class AgentConfig {
         }
         return base + "-" + getEffectiveJvmId();
     }
+
+    public boolean isLogEnvironmentVariables() { return logEnvironmentVariables; }
+    public void setLogEnvironmentVariables(boolean logEnvironmentVariables) { this.logEnvironmentVariables = logEnvironmentVariables; }
+    public boolean isMaskSensitiveEnv() { return maskSensitiveEnv; }
+    public void setMaskSensitiveEnv(boolean maskSensitiveEnv) { this.maskSensitiveEnv = maskSensitiveEnv; }
+    public List<String> getEnvFilter() { return envFilter; }
+    public void setEnvFilter(List<String> envFilter) { this.envFilter = envFilter; }
+
+    public boolean isCaptureSpringBeans() { return captureSpringBeans; }
+    public void setCaptureSpringBeans(boolean captureSpringBeans) { this.captureSpringBeans = captureSpringBeans; }
+    public boolean isLogBeansOnStartup() { return logBeansOnStartup; }
+    public void setLogBeansOnStartup(boolean logBeansOnStartup) { this.logBeansOnStartup = logBeansOnStartup; }
 }

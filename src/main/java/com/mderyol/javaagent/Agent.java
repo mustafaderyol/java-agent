@@ -54,7 +54,10 @@ public class Agent {
                         + ", interval: " + config.getMetricsIntervalSeconds() + "s)");
             }
 
-            // 5. Start Dynamic Remote Probe & Web UI HTTP Server
+            // 5. Optional Environment Variables & System Properties file logging
+            com.mderyol.javaagent.env.EnvironmentManager.logToFileIfEnabled(config);
+
+            // 6. Start Dynamic Remote Probe & Web UI HTTP Server
             ProbeServer.start(config);
 
             // 6. Install Bytecode Instrumentation
@@ -124,6 +127,17 @@ public class Agent {
                     return builder;
                 })
                 .installOn(instrumentation);
+
+        // 3. Optional Spring Bean Discovery Interception (captures ApplicationContext on finishRefresh)
+        if (config.isCaptureSpringBeans()) {
+            new AgentBuilder.Default()
+                    .type(hasSuperType(named("org.springframework.context.ApplicationContext"))
+                            .or(nameContains("AbstractApplicationContext")))
+                    .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                            builder.method(named("finishRefresh").or(named("refresh")))
+                                    .intercept(Advice.to(com.mderyol.javaagent.beans.SpringContextAdvice.class)))
+                    .installOn(instrumentation);
+        }
     }
 
     private static ElementMatcher.Junction<NamedElement> buildPrefixMatcher(List<String> prefixes) {

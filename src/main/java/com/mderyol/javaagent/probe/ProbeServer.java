@@ -58,6 +58,8 @@ public class ProbeServer {
         server.createContext("/probe/status", new StatusProbeHandler());
         server.createContext("/health", new HealthHandler());
         server.createContext("/metrics", new MetricsHandler());
+        server.createContext("/env", new EnvHandler());
+        server.createContext("/beans", new BeansHandler());
 
         // Dahili Gömülü UI ve Log Servisi (Ayrı port gereksinimini çözer!)
         server.createContext("/ui", new UiHandler());
@@ -249,19 +251,6 @@ public class ProbeServer {
                 return true;
             }
         }
-
-        private Map<String, String> parseQueryParams(String query) {
-            Map<String, String> map = new HashMap<>();
-            if (query == null || query.isBlank()) return map;
-            for (String pair : query.split("&")) {
-                String[] kv = pair.split("=", 2);
-                if (kv.length == 2) {
-                    map.put(URLDecoder.decode(kv[0], StandardCharsets.UTF_8),
-                            URLDecoder.decode(kv[1], StandardCharsets.UTF_8));
-                }
-            }
-            return map;
-        }
     }
 
     private class StartProbeHandler implements HttpHandler {
@@ -422,6 +411,57 @@ public class ProbeServer {
                 sendResponse(exchange, 500, Map.of("error", "Failed to retrieve metrics: " + e.getMessage()));
             }
         }
+    }
+
+    private class EnvHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) {
+            addCorsHeaders(exchange);
+            try {
+                Map<String, String> params = parseQueryParams(exchange.getRequestURI().getQuery());
+                boolean unmask = "true".equalsIgnoreCase(params.get("unmask"));
+                boolean mask = !unmask && config.isMaskSensitiveEnv();
+                String filterParam = params.get("filter");
+                List<String> filters = filterParam != null && !filterParam.isBlank()
+                        ? Arrays.asList(filterParam.split(","))
+                        : config.getEnvFilter();
+
+                Map<String, Object> envSnapshot = com.mderyol.javaagent.env.EnvironmentManager.getCombinedSnapshot(mask, filters);
+                sendResponse(exchange, 200, envSnapshot);
+            } catch (Exception e) {
+                sendResponse(exchange, 500, Map.of("error", "Failed to retrieve environment: " + e.getMessage()));
+            }
+        }
+    }
+
+    private class BeansHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) {
+            addCorsHeaders(exchange);
+            try {
+                Map<String, String> params = parseQueryParams(exchange.getRequestURI().getQuery());
+                String nameFilter = params.get("name");
+                String packageFilter = params.get("package");
+
+                Map<String, Object> beansSnapshot = com.mderyol.javaagent.beans.SpringBeanManager.getInstance().getBeansSnapshot(nameFilter, packageFilter);
+                sendResponse(exchange, 200, beansSnapshot);
+            } catch (Exception e) {
+                sendResponse(exchange, 500, Map.of("error", "Failed to retrieve Spring beans: " + e.getMessage()));
+            }
+        }
+    }
+
+    private static Map<String, String> parseQueryParams(String query) {
+        Map<String, String> map = new HashMap<>();
+        if (query == null || query.isBlank()) return map;
+        for (String pair : query.split("&")) {
+            String[] kv = pair.split("=", 2);
+            if (kv.length == 2) {
+                map.put(URLDecoder.decode(kv[0], StandardCharsets.UTF_8),
+                        URLDecoder.decode(kv[1], StandardCharsets.UTF_8));
+            }
+        }
+        return map;
     }
 
     private void addCorsHeaders(HttpExchange exchange) {

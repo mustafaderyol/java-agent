@@ -818,6 +818,16 @@
         🎯 Live REQ/RES <span id="activeProbeBadge" class="badge" style="background: rgba(167, 139, 250, 0.4); margin-left: 4px; display: none;">0</span>
       </button>
 
+      <!-- SPRING BEANS EXPLORER -->
+      <button class="btn" onclick="openBeansModal()" title="Inspect registered Spring Beans and attach probes">
+        🌱 Beans
+      </button>
+
+      <!-- ENVIRONMENT EXPLORER -->
+      <button class="btn" onclick="openEnvModal()" title="Inspect Environment Variables & JVM System Properties">
+        🌐 Env
+      </button>
+
       <!-- CURL GUIDE BUTTON -->
       <button class="btn" onclick="openCurlGuideModal()" title="cURL terminal usage guide">
         📖 cURL Guide
@@ -1181,6 +1191,54 @@ curl -X POST http://localhost:9876/probe/stop \
   -d '{"all": true}'</pre>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- SPRING BEANS MODAL -->
+  <div class="modal-overlay" id="beansModal" onclick="closeBeansModal(event)">
+    <div class="modal-card" style="max-width: 820px; max-height: 85vh;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">🌱</span>
+          <span style="font-weight: 700; color: #fff;">Registered Spring Beans</span>
+          <span id="beansCountBadge" class="badge" style="background: rgba(52, 211, 153, 0.2); color: var(--success); font-size: 11px;">0 Beans</span>
+        </div>
+        <button class="btn-close" onclick="document.getElementById('beansModal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-body" style="gap: 12px;">
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="beanSearchInput" class="search-input" placeholder="Search beans by name, type or package..." oninput="filterBeansList()" style="flex: 1;">
+          <button class="btn" onclick="fetchBeansList()" title="Reload Beans from Server">🔄 Refresh</button>
+        </div>
+        <div id="beansListContainer" style="display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto;">
+          <!-- Loaded Beans Cards -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENVIRONMENT & SYSTEM PROPERTIES MODAL -->
+  <div class="modal-overlay" id="envModal" onclick="closeEnvModal(event)">
+    <div class="modal-card" style="max-width: 800px; max-height: 85vh;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">🌐</span>
+          <span style="font-weight: 700; color: #fff;">Environment Variables & System Properties</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn" id="maskToggleBtn" onclick="toggleEnvMasking()" style="font-size: 11px;">🔒 Masked: ON</button>
+          <button class="btn-close" onclick="document.getElementById('envModal').classList.remove('open')">✕</button>
+        </div>
+      </div>
+      <div class="modal-body" style="gap: 12px;">
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="envSearchInput" class="search-input" placeholder="Search variables (e.g. JAVA_HOME, PORT, spring)..." oninput="filterEnvList()" style="flex: 1;">
+          <button class="btn" onclick="copyEnvJson()" title="Copy all as JSON">📋 Copy JSON</button>
+        </div>
+        <div id="envListContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto;">
+          <!-- Env Key-Value pairs -->
+        </div>
       </div>
     </div>
   </div>
@@ -1951,6 +2009,214 @@ curl -X POST http://localhost:9876/probe/stop \
           container.appendChild(card);
         });
       } catch (ignored) {}
+    }
+
+    // --- SPRING BEANS EXPLORER ---
+    let cachedBeansList = [];
+
+    function openBeansModal() {
+      document.getElementById('beansModal').classList.add('open');
+      fetchBeansList();
+    }
+
+    function closeBeansModal(e) {
+      if (e.target.id === 'beansModal') {
+        document.getElementById('beansModal').classList.remove('open');
+      }
+    }
+
+    async function fetchBeansList() {
+      const container = document.getElementById('beansListContainer');
+      container.innerHTML = '<div style="color: var(--text-muted); padding: 20px; text-align: center;">Loading Spring beans...</div>';
+      try {
+        const resp = await fetch(getApiBaseUrl() + '/beans');
+        if (!resp.ok) {
+          container.innerHTML = `<div style="color: var(--danger); padding: 20px; text-align: center;">HTTP Error: ${resp.status}</div>`;
+          return;
+        }
+        const data = await resp.json();
+        if (data.status === 'NO_SPRING_CONTEXT_CAPTURED') {
+          container.innerHTML = `
+            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 20px; text-align: center;">
+              <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
+              <div style="font-weight: 700; color: #fbbf24; margin-bottom: 4px;">Spring Context Not Captured Yet</div>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                If your application uses Spring Boot, the ApplicationContext will be captured automatically as soon as the application completes startup.
+              </div>
+            </div>`;
+          document.getElementById('beansCountBadge').textContent = '0 Beans';
+          cachedBeansList = [];
+          return;
+        }
+
+        cachedBeansList = data.beans || [];
+        document.getElementById('beansCountBadge').textContent = `${cachedBeansList.length} Beans`;
+        renderBeansList(cachedBeansList);
+      } catch (e) {
+        container.innerHTML = `<div style="color: var(--danger); padding: 20px; text-align: center;">Failed to load beans: ${e.message}</div>`;
+      }
+    }
+
+    function renderBeansList(beans) {
+      const container = document.getElementById('beansListContainer');
+      container.innerHTML = '';
+
+      if (!beans || beans.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); padding: 20px; text-align: center;">No matching beans found.</div>';
+        return;
+      }
+
+      beans.forEach(b => {
+        const card = document.createElement('div');
+        card.style.cssText = "background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px;";
+
+        const isSpringInternal = b.className.startsWith('org.springframework.') || b.className.startsWith('org.apache.');
+        const badgeColor = isSpringInternal ? "rgba(255,255,255,0.06)" : "rgba(52, 211, 153, 0.15)";
+        const badgeText = isSpringInternal ? "Framework" : "App Bean";
+        const textColor = isSpringInternal ? "var(--text-muted)" : "var(--success)";
+
+        let methodsHtml = '';
+        if (b.publicMethods && b.publicMethods.length > 0) {
+          methodsHtml = `
+            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
+              ${b.publicMethods.slice(0, 6).map(m => `
+                <button class="btn" style="padding: 2px 7px; font-size: 10px; font-family: var(--font-code);" onclick="probeBeanMethod('${b.className}', '${m}')" title="Attach dynamic probe to ${m}">
+                  🎯 ${m}
+                </button>
+              `).join('')}
+              ${b.publicMethods.length > 6 ? `<span style="font-size: 10px; color: var(--text-muted); align-self: center;">+${b.publicMethods.length - 6} more</span>` : ''}
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-family: var(--font-code); font-weight: 700; color: #fff; font-size: 13px;">${b.beanName}</span>
+                <span class="badge" style="background: ${badgeColor}; color: ${textColor}; font-size: 10px;">${badgeText}</span>
+                ${b.isSingleton ? '<span class="badge" style="background: rgba(56, 189, 248, 0.1); color: var(--accent); font-size: 10px;">Singleton</span>' : ''}
+              </div>
+              <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${b.className}
+              </span>
+            </div>
+            <button class="btn btn-probe" style="padding: 3px 10px; font-size: 11px; white-space: nowrap;" onclick="probeBeanMethod('${b.className}', '*')">
+              🎯 Probe All
+            </button>
+          </div>
+          ${methodsHtml}
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function filterBeansList() {
+      const q = document.getElementById('beanSearchInput').value.trim().toLowerCase();
+      if (!q) {
+        renderBeansList(cachedBeansList);
+        return;
+      }
+      const filtered = cachedBeansList.filter(b =>
+        b.beanName.toLowerCase().includes(q) ||
+        b.className.toLowerCase().includes(q) ||
+        (b.packageName && b.packageName.toLowerCase().includes(q))
+      );
+      renderBeansList(filtered);
+    }
+
+    function probeBeanMethod(className, methodName) {
+      document.getElementById('beansModal').classList.remove('open');
+      openProbeModal();
+      document.getElementById('probeClassInput').value = className;
+      document.getElementById('probeMethodInput').value = methodName || '*';
+      showToast(`Selected bean: ${className}`, '🌱');
+    }
+
+    // --- ENVIRONMENT EXPLORER ---
+    let isEnvMasked = true;
+    let cachedEnvData = null;
+
+    function openEnvModal() {
+      document.getElementById('envModal').classList.add('open');
+      fetchEnvData();
+    }
+
+    function closeEnvModal(e) {
+      if (e.target.id === 'envModal') {
+        document.getElementById('envModal').classList.remove('open');
+      }
+    }
+
+    async function fetchEnvData() {
+      const container = document.getElementById('envListContainer');
+      container.innerHTML = '<div style="color: var(--text-muted); padding: 20px; text-align: center;">Loading environment variables...</div>';
+      try {
+        const url = `${getApiBaseUrl()}/env?unmask=${!isEnvMasked}`;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          container.innerHTML = `<div style="color: var(--danger); padding: 20px; text-align: center;">HTTP Error: ${resp.status}</div>`;
+          return;
+        }
+        cachedEnvData = await resp.json();
+        renderEnvData(cachedEnvData);
+      } catch (e) {
+        container.innerHTML = `<div style="color: var(--danger); padding: 20px; text-align: center;">Failed to load environment: ${e.message}</div>`;
+      }
+    }
+
+    function renderEnvData(data) {
+      const container = document.getElementById('envListContainer');
+      container.innerHTML = '';
+      if (!data) return;
+
+      const q = (document.getElementById('envSearchInput').value || '').trim().toLowerCase();
+      const envs = data.environmentVariables || {};
+      const sysProps = data.systemProperties || {};
+
+      const renderSection = (title, icon, items) => {
+        const keys = Object.keys(items).filter(k => !q || k.toLowerCase().includes(q) || String(items[k]).toLowerCase().includes(q));
+        if (keys.length === 0) return;
+
+        const header = document.createElement('div');
+        header.style.cssText = "font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; margin-bottom: 4px;";
+        header.textContent = `${icon} ${title} (${keys.length})`;
+        container.appendChild(header);
+
+        keys.forEach(k => {
+          const row = document.createElement('div');
+          row.style.cssText = "background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-family: var(--font-code); font-size: 11px;";
+
+          const isSecret = data.masked && String(items[k]).includes('***');
+          row.innerHTML = `
+            <span style="color: #fff; font-weight: 600; min-width: 220px; word-break: break-all;">${k}</span>
+            <span style="color: ${isSecret ? 'var(--warning)' : 'var(--text-muted)'}; word-break: break-all; text-align: right; flex: 1;">${items[k]}</span>
+          `;
+          container.appendChild(row);
+        });
+      };
+
+      renderSection("Environment Variables", "🌍", envs);
+      renderSection("JVM System Properties", "⚙️", sysProps);
+    }
+
+    function filterEnvList() {
+      if (cachedEnvData) renderEnvData(cachedEnvData);
+    }
+
+    function toggleEnvMasking() {
+      isEnvMasked = !isEnvMasked;
+      const btn = document.getElementById('maskToggleBtn');
+      btn.textContent = isEnvMasked ? "🔒 Masked: ON" : "⚠️ Masked: OFF (Raw)";
+      btn.style.color = isEnvMasked ? "var(--text-main)" : "var(--warning)";
+      fetchEnvData();
+    }
+
+    function copyEnvJson() {
+      if (!cachedEnvData) return;
+      navigator.clipboard.writeText(JSON.stringify(cachedEnvData, null, 2)).then(() => {
+        showToast("Copied environment JSON to clipboard", "📋");
+      });
     }
 
     function showToast(message, icon = '⚡') {
