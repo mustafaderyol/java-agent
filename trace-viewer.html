@@ -392,6 +392,46 @@
       justify-content: space-between;
     }
 
+    .tx-filter-chips {
+      display: flex;
+      gap: 6px;
+    }
+
+    .chip-filter {
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip-filter:hover {
+      border-color: #64748b;
+      color: #fff;
+    }
+
+    .chip-filter.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .chip-filter.chip-error.active {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--danger);
+      color: #fca5a5;
+    }
+
+    .chip-filter.chip-success.active {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: var(--success);
+      color: #86efac;
+    }
+
     .tx-list {
       flex: 1;
       overflow-y: auto;
@@ -1069,7 +1109,12 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <input type="text" id="searchInput" class="search-input" placeholder="Client-side search (ID, method)..." oninput="filterTransactions()">
+        <input type="text" id="searchInput" class="search-input" placeholder="Client-side search (ID, method, error)..." oninput="filterTransactions()">
+        <div class="tx-filter-chips">
+          <button class="chip-filter active" id="chipFilterAll" onclick="setQuickStatusFilter('ALL')">All (<span id="countAll">0</span>)</button>
+          <button class="chip-filter chip-error" id="chipFilterError" onclick="setQuickStatusFilter('ERROR')">🔴 Failed (<span id="countErrors">0</span>)</button>
+          <button class="chip-filter chip-success" id="chipFilterSuccess" onclick="setQuickStatusFilter('SUCCESS')">🟢 Success (<span id="countSuccess">0</span>)</button>
+        </div>
         <div class="tx-stats">
           <span id="txCount">0 Transactions</span>
           <span id="avgLatency">Avg Latency: 0ms</span>
@@ -1148,7 +1193,7 @@
 
   <!-- ERROR MODAL -->
   <div class="modal-overlay" id="errorModal" onclick="closeErrorModal(event)">
-    <div class="modal-card" style="width: 620px;" onclick="event.stopPropagation()">
+    <div class="modal-card" style="width: 720px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 18px;">⚠️</span>
@@ -1157,11 +1202,14 @@
             <div id="errorModalMethod" style="font-size: 11px; color: var(--text-muted); word-break: break-all;"></div>
           </div>
         </div>
-        <button class="btn" onclick="closeErrorModal()">✕</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn" style="padding: 3px 8px; font-size: 11px;" onclick="copyCode('errorModalContent')">📋 Copy Stack Trace</button>
+          <button class="btn" onclick="closeErrorModal()">✕</button>
+        </div>
       </div>
       <div class="modal-body">
-        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Thrown Exception / Error Message:</div>
-        <pre class="code-box" id="errorModalContent" style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); max-height: 320px;">-</pre>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Captured Exception & Stack Trace:</div>
+        <pre class="code-box" id="errorModalContent" style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); max-height: 420px; font-size: 11px; white-space: pre-wrap;">-</pre>
       </div>
     </div>
   </div>
@@ -1573,7 +1621,7 @@ tail -f agent-logs/error-*.log</pre>
         const text = await resp.text();
         parseLogContent(text);
 
-        if (!selectedFile.includes('probe')) {
+        if (!selectedFile.includes('probe') && !selectedFile.includes('error')) {
           try {
             let probeFileName = 'probe-capture.log';
             if (selectedFile.startsWith('trace-') && selectedFile.endsWith('.log')) {
@@ -1586,6 +1634,21 @@ tail -f agent-logs/error-*.log</pre>
             if (probeResp && probeResp.ok) {
               const probeText = await probeResp.text();
               mergeProbeCaptures(probeText);
+            }
+          } catch (ignored) {}
+
+          try {
+            let errorFileName = 'error.log';
+            if (selectedFile.startsWith('trace-') && selectedFile.endsWith('.log')) {
+              errorFileName = selectedFile.replace('trace-', 'error-');
+            }
+            let errResp = await fetch(`${getApiBaseUrl()}/api/logs?file=${encodeURIComponent(errorFileName)}&tail=500`);
+            if (!errResp.ok && errorFileName !== 'error.log') {
+              errResp = await fetch(`${getApiBaseUrl()}/api/logs?file=error.log&tail=500`);
+            }
+            if (errResp && errResp.ok) {
+              const errText = await errResp.text();
+              mergeErrorLogs(errText);
             }
           } catch (ignored) {}
         }
@@ -1637,6 +1700,32 @@ tail -f agent-logs/error-*.log</pre>
       }
     }
 
+    function mergeErrorLogs(content) {
+      const lines = content.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const err = JSON.parse(trimmed);
+          const ev = rawEvents.find(e => (err.spanId && e.spanId === err.spanId) ||
+            (e.transactionId === err.transactionId && e.methodName === err.methodName));
+          if (ev) {
+            ev.stackTrace = err.stackTrace;
+            ev.exceptionClass = err.exceptionClass;
+            ev.errorMessage = err.exceptionMessage || ev.errorMessage;
+            ev.cause = err.cause;
+            ev.status = 'ERROR';
+            const tx = transactionsMap.get(ev.transactionId);
+            if (tx) tx.hasError = true;
+          }
+        } catch (ignored) {}
+      }
+      renderSidebar();
+      if (currentSelectedTxId) {
+        selectTransaction(currentSelectedTxId);
+      }
+    }
+
     function parseLogContent(content) {
       const lines = content.split('\n');
       rawEvents = [];
@@ -1666,10 +1755,10 @@ tail -f agent-logs/error-*.log</pre>
           tx.events.push(event);
           if (event.depth === 0) {
             tx.rootEvent = event;
-            tx.totalDuration = event.durationMs;
+            tx.totalDuration = event.durationMs != null ? event.durationMs : 0;
           }
           if (event.requestPayload || event.responsePayload) tx.hasProbe = true;
-          if (event.status === 'ERROR') tx.hasError = true;
+          if (event.status === 'ERROR' || event.exceptionClass || event.stackTrace) tx.hasError = true;
         } catch (ignored) {}
       }
 
@@ -1680,9 +1769,34 @@ tail -f agent-logs/error-*.log</pre>
       }
     }
 
+    let currentStatusFilter = 'ALL';
+
+    function setQuickStatusFilter(status) {
+      currentStatusFilter = status;
+      document.querySelectorAll('.chip-filter').forEach(c => c.classList.remove('active'));
+      if (status === 'ALL') document.getElementById('chipFilterAll')?.classList.add('active');
+      else if (status === 'ERROR') document.getElementById('chipFilterError')?.classList.add('active');
+      else if (status === 'SUCCESS') document.getElementById('chipFilterSuccess')?.classList.add('active');
+      filterTransactions();
+    }
+
     function renderSidebar(filteredTxIds = null) {
       const listEl = document.getElementById('txList');
       listEl.innerHTML = '';
+
+      // Update filter chip counters
+      let errCount = 0;
+      let succCount = 0;
+      transactionsMap.forEach(tx => {
+        if (tx.hasError) errCount++;
+        else succCount++;
+      });
+      const cAll = document.getElementById('countAll');
+      if (cAll) cAll.textContent = transactionsMap.size;
+      const cErr = document.getElementById('countErrors');
+      if (cErr) cErr.textContent = errCount;
+      const cSucc = document.getElementById('countSuccess');
+      if (cSucc) cSucc.textContent = succCount;
 
       const txIds = filteredTxIds || Array.from(transactionsMap.keys());
       document.getElementById('txCount').textContent = txIds.length + (txIds.length === 1 ? ' Transaction' : ' Transactions');
@@ -1692,15 +1806,16 @@ tail -f agent-logs/error-*.log</pre>
 
       txIds.forEach(txId => {
         const tx = transactionsMap.get(txId);
-        const root = tx.rootEvent || tx.events[0];
-        const duration = tx.totalDuration || root.durationMs;
+        if (!tx) return;
+        const root = tx.rootEvent || tx.events[0] || {};
+        const duration = (tx.totalDuration != null ? tx.totalDuration : (root.durationMs != null ? root.durationMs : 0));
         totalLatency += duration;
         count++;
 
         const timeStr = tx.timestamp ? new Date(tx.timestamp).toLocaleTimeString() : '';
 
         const card = document.createElement('div');
-        card.className = 'tx-card' + (currentSelectedTxId === txId ? ' active' : '');
+        card.className = 'tx-card' + (currentSelectedTxId === txId ? ' active' : '') + (tx.hasError ? ' tx-card-error' : '');
         card.onclick = () => selectTransaction(txId);
 
         let badgesHtml = '';
@@ -1708,14 +1823,16 @@ tail -f agent-logs/error-*.log</pre>
         else badgesHtml += '<span class="badge badge-success">SUCCESS</span>';
         if (tx.hasProbe) badgesHtml += ' <span class="badge badge-probe">PROBE</span>';
 
+        const rootName = (root.className ? (root.className.split('$').pop() || root.className) : 'Unknown') + '.' + (root.methodName || 'unknown');
+
         card.innerHTML = `
           <div class="tx-top">
             <span class="tx-id">${txId.substring(0, 13)}...</span>
             <div>${badgesHtml}</div>
           </div>
-          <div class="tx-root">${root.className.split('$').pop() || root.className}.${root.methodName}</div>
+          <div class="tx-root" style="${tx.hasError ? 'color: #fca5a5;' : ''}">${rootName}</div>
           <div class="tx-bottom">
-            <span>⏱️ ${duration.toFixed(2)} ms (${tx.events.length} methods)</span>
+            <span>⏱️ ${Number(duration).toFixed(2)} ms (${tx.events.length} methods)</span>
             <span>${timeStr}</span>
           </div>
         `;
@@ -1728,19 +1845,30 @@ tail -f agent-logs/error-*.log</pre>
 
     function filterTransactions() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (!query) {
-        renderSidebar();
-        return;
-      }
-
       const filtered = [];
+
       transactionsMap.forEach((tx, txId) => {
+        // Status tab check
+        if (currentStatusFilter === 'ERROR' && !tx.hasError) return;
+        if (currentStatusFilter === 'SUCCESS' && tx.hasError) return;
+
+        // Query search
+        if (!query) {
+          filtered.push(txId);
+          return;
+        }
+
+        const matchStatus = (query === 'error' && tx.hasError) || (query === 'failed' && tx.hasError) || (query === 'fail' && tx.hasError) || (query === 'success' && !tx.hasError);
         const matchId = txId.toLowerCase().includes(query);
         const matchMethods = tx.events.some(e =>
           (e.className && e.className.toLowerCase().includes(query)) ||
-          (e.methodName && e.methodName.toLowerCase().includes(query))
+          (e.methodName && e.methodName.toLowerCase().includes(query)) ||
+          (e.errorMessage && e.errorMessage.toLowerCase().includes(query)) ||
+          (e.exceptionClass && e.exceptionClass.toLowerCase().includes(query)) ||
+          (e.stackTrace && e.stackTrace.toLowerCase().includes(query))
         );
-        if (matchId || matchMethods) {
+
+        if (matchStatus || matchId || matchMethods) {
           filtered.push(txId);
         }
       });
@@ -1757,8 +1885,8 @@ tail -f agent-logs/error-*.log</pre>
       const tx = transactionsMap.get(txId);
       if (!tx) return;
 
-      const root = tx.rootEvent || tx.events[0];
-      const totalDur = tx.totalDuration || root.durationMs;
+      const root = tx.rootEvent || tx.events[0] || {};
+      const totalDur = (tx.totalDuration != null ? tx.totalDuration : (root.durationMs != null ? root.durationMs : 0));
 
       // Executive Summary Bar'ı Doldur
       document.getElementById('summaryStrip').style.display = 'grid';
@@ -1766,16 +1894,17 @@ tail -f agent-logs/error-*.log</pre>
       document.getElementById('sumStartTime').textContent = startDate.toLocaleTimeString() + '.' + String(startDate.getMilliseconds()).padStart(3, '0');
       document.getElementById('sumRelativeTime').textContent = getRelativeTime(startDate);
 
-      document.getElementById('sumTotalDuration').textContent = totalDur.toFixed(2) + ' ms';
+      document.getElementById('sumTotalDuration').textContent = Number(totalDur).toFixed(2) + ' ms';
       document.getElementById('sumSpansCount').textContent = `${tx.events.length} method calls`;
 
       // En yavaş metodu (Bottleneck) bul
-      let slowest = tx.events[0];
+      let slowest = tx.events[0] || { className: '-', methodName: '-', durationMs: 0 };
       tx.events.forEach(e => {
-        if (e.durationMs > slowest.durationMs) slowest = e;
+        if ((e.durationMs || 0) > (slowest.durationMs || 0)) slowest = e;
       });
-      document.getElementById('sumSlowestMethod').textContent = `${slowest.className.split('$').pop()}.${slowest.methodName}`;
-      document.getElementById('sumSlowestDuration').textContent = `${slowest.durationMs.toFixed(2)} ms (%${((slowest.durationMs / totalDur) * 100).toFixed(1)})`;
+      const slowDur = slowest.durationMs || 0;
+      document.getElementById('sumSlowestMethod').textContent = `${(slowest.className || '-').split('$').pop()}.${slowest.methodName || '-'}`;
+      document.getElementById('sumSlowestDuration').textContent = `${slowDur.toFixed(2)} ms (%${totalDur > 0 ? ((slowDur / totalDur) * 100).toFixed(1) : 0})`;
 
       document.getElementById('sumHost').textContent = root.host || '-';
       document.getElementById('sumJvmPid').textContent = `${root.jvmId || 'jvm'} (PID: ${root.pid || '-'})`;

@@ -79,6 +79,9 @@ public class ErrorLogManager {
             event.setDepth(span.getDepth());
             event.setClassName(span.getClassName());
             event.setMethodName(span.getMethodName());
+            if (span.getStartTimeNanos() > 0) {
+                event.setDurationMs((System.nanoTime() - span.getStartTimeNanos()) / 1_000_000.0);
+            }
             event.setExceptionClass(thrown.getClass().getName());
             event.setExceptionMessage(thrown.getMessage());
 

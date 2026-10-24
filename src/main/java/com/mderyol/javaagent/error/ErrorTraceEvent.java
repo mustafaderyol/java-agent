@@ -18,8 +18,16 @@ public class ErrorTraceEvent {
     private String exceptionMessage;
     private String stackTrace;
     private String cause;
+    private String status = "ERROR";
+    private double durationMs = 0.0;
 
     public ErrorTraceEvent() {}
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public double getDurationMs() { return durationMs; }
+    public void setDurationMs(double durationMs) { this.durationMs = durationMs; }
 
     public String getTimestamp() { return timestamp; }
     public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
